@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Auditoria · Empréstimo de Equipamentos · Agroquima</title>
+<style>
+/* ═══════════════════════════════════════════════
+   PALETA AGROQUIMA
+   Azul Royal  #0D47A1 | Azul Escuro #002B5B
+   Azul Claro  #64B5F6 | Preto       #000000
+   Cinza Esc   #333333 | Cinza Claro #E6E6E6
+══════════════════════════════════════════════ */
+:root{
+  --aq-royal:#0D47A1; --aq-dark:#002B5B; --aq-light:#64B5F6;
+  --aq-black:#000000; --aq-gray:#333333; --aq-lgray:#E6E6E6;
+  --alert:#C62828; --warn:#E65100; --ok:#1B5E20;
+  --ok-bg:#E8F5E9; --warn-bg:#FFF3E0; --alert-bg:#FFEBEE;
+  --surface:#F5F7FC; --card:#fff;
+  --border:#D8E3F0; --txt:#1A2540; --txt2:#4A5980;
+  --radius:10px; --shadow:0 2px 10px rgba(0,43,91,.09);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--surface);color:var(--txt);min-height:100vh}
+
+/* ── TOP BAR ── */
+.topbar{background:var(--aq-dark);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(0,0,0,.35)}
+.topbar-brand{display:flex;align-items:center;gap:14px}
+.logo-mark{display:flex;align-items:center;gap:2px}
+.logo-mark .box{width:16px;height:16px;border-radius:4px;border:2.5px solid #fff}
+.logo-mark .box-filled{background:var(--aq-royal);border-color:var(--aq-light)}
+.logo-mark .half{background:linear-gradient(to bottom,var(--aq-light) 50%,transparent 50%);border-color:var(--aq-light)}
+.brand-text{display:flex;flex-direction:column}
+.brand-name{color:#fff;font-size:.88rem;font-weight:800;letter-spacing:.12em;line-height:1}
+.brand-sub{color:var(--aq-light);font-size:.62rem;letter-spacing:.06em}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-date{color:var(--aq-light);font-size:.72rem}
+.upload-btn{background:var(--aq-royal);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:.74rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s}
+.upload-btn:hover{background:var(--aq-light);color:var(--aq-dark)}
+#fileInput{display:none}
+
+/* ── ALERTA BANNER ── */
+.alert-bar{background:var(--alert);color:#fff;text-align:center;padding:7px 20px;font-size:.8rem;font-weight:700;display:none;align-items:center;justify-content:center;gap:8px;letter-spacing:.02em}
+.alert-bar.show{display:flex}
+
+/* ── NAVEGAÇÃO TABS ── */
+.nav{background:var(--aq-dark);border-top:1px solid rgba(255,255,255,.1);padding:0 28px;display:flex;overflow-x:auto;gap:0}
+.nav::-webkit-scrollbar{height:3px}.nav::-webkit-scrollbar-thumb{background:var(--aq-royal)}
+.ntab{padding:10px 18px;color:rgba(255,255,255,.55);font-size:.76rem;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .18s;display:flex;align-items:center;gap:6px}
+.ntab:hover{color:#fff;background:rgba(255,255,255,.05)}
+.ntab.active{color:#fff;border-bottom-color:var(--aq-light)}
+.ntab .nbadge{background:var(--alert);color:#fff;border-radius:10px;padding:1px 6px;font-size:.62rem;font-weight:800}
+.ntab .nbadge.ok{background:var(--ok)}
+
+/* ── UPLOAD STATE ── */
+.upload-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:20px;padding:40px}
+.upload-icon{font-size:4rem}
+.upload-title{font-size:1.4rem;font-weight:700;color:var(--aq-dark)}
+.upload-desc{color:var(--txt2);font-size:.88rem;text-align:center;max-width:400px;line-height:1.6}
+.upload-drop{border:3px dashed var(--aq-light);border-radius:16px;padding:40px 60px;text-align:center;cursor:pointer;transition:all .2s;background:#fff}
+.upload-drop:hover,.upload-drop.drag{border-color:var(--aq-royal);background:#F0F5FF}
+.upload-drop-btn{margin-top:14px;background:var(--aq-royal);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:.84rem;font-weight:700;cursor:pointer}
+
+/* ── MAIN ── */
+main{padding:22px 28px;max-width:1480px;margin:0 auto}
+.pnl{display:none}.pnl.active{display:block}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:14px;margin-bottom:22px}
+.kpi-card{background:var(--card);border-radius:var(--radius);padding:18px 16px;box-shadow:var(--shadow);cursor:pointer;transition:transform .15s,box-shadow .15s;border-top:4px solid var(--aq-royal);position:relative;overflow:hidden}
+.kpi-card::after{content:'';position:absolute;right:-16px;bottom:-16px;width:60px;height:60px;border-radius:50%;background:rgba(13,71,161,.06)}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,43,91,.15)}
+.kpi-card.red{border-top-color:var(--alert)}
+.kpi-card.amber{border-top-color:var(--warn)}
+.kpi-card.green{border-top-color:var(--ok)}
+.kpi-card.blue{border-top-color:var(--aq-light)}
+.kpi-label{font-size:.67rem;text-transform:uppercase;letter-spacing:.08em;color:var(--txt2);margin-bottom:8px;font-weight:600}
+.kpi-value{font-size:2.1rem;font-weight:800;line-height:1;color:var(--aq-dark)}
+.kpi-card.red .kpi-value{color:var(--alert)}
+.kpi-card.amber .kpi-value{color:var(--warn)}
+.kpi-card.green .kpi-value{color:var(--ok)}
+.kpi-sub{font-size:.69rem;color:var(--txt2);margin-top:5px}
+
+/* ── SECTION ── */
+.sec-title{font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--aq-dark);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px}
+
+/* ── FILTRO BAR ── */
+.filter-bar{background:var(--card);border-radius:var(--radius);padding:14px 18px;margin-bottom:16px;box-shadow:var(--shadow);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.filter-bar input,.filter-bar select{padding:7px 11px;border:1.5px solid var(--border);border-radius:7px;font-size:.76rem;color:var(--txt);background:#fff;outline:none;transition:border-color .15s}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--aq-royal)}
+.filter-bar input{min-width:210px}
+.filter-group{display:flex;align-items:center;gap:6px}
+.filter-label{font-size:.68rem;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:7px 14px;border:none;border-radius:7px;font-size:.74rem;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--aq-royal);color:#fff}.btn-primary:hover{background:var(--aq-dark)}
+.btn-ghost{background:var(--border);color:var(--txt)}.btn-ghost:hover{background:var(--aq-lgray)}
+.btn-danger{background:var(--alert);color:#fff}
+.active-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.filter-tag{background:var(--aq-royal);color:#fff;border-radius:20px;padding:3px 10px;font-size:.68rem;font-weight:600;display:flex;align-items:center;gap:5px;cursor:pointer}
+.filter-tag:hover{background:var(--aq-dark)}
+
+/* ── TABELA ── */
+.table-wrap{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-bottom:18px}
+.table-head-row{background:var(--aq-dark);padding:12px 18px;display:flex;align-items:center;justify-content:space-between}
+.table-head-title{color:#fff;font-size:.8rem;font-weight:700}
+.table-head-right{display:flex;align-items:center;gap:8px}
+.tcount{background:rgba(255,255,255,.18);color:#fff;font-size:.68rem;padding:3px 10px;border-radius:16px;font-weight:700}
+.btn-csv{background:var(--ok);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:.7rem;font-weight:700;cursor:pointer}
+.btn-csv:hover{background:#145214}
+table{width:100%;border-collapse:collapse}
+thead tr{background:#EEF3FB}
+th{padding:9px 12px;text-align:left;font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--aq-dark);cursor:pointer;white-space:nowrap;user-select:none;border-bottom:2px solid var(--border)}
+th:hover{background:#E0EAF8}
+th .sort-arrow{color:var(--aq-light);margin-left:3px}
+td{padding:9px 12px;font-size:.77rem;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr{cursor:pointer;transition:background .12s}
+tbody tr:hover{background:#F0F5FF}
+tbody tr.expanded{background:#EBF2FF}
+.expand-row td{padding:0;background:#F8FAFF}
+.expand-inner{padding:16px 20px;font-size:.76rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;border-top:2px solid var(--aq-light)}
+.expand-field{display:flex;flex-direction:column;gap:3px}
+.expand-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--txt2)}
+.expand-value{font-weight:600;color:var(--aq-dark)}
+.tfoot-row{padding:9px 18px;background:#F8FAFF;font-size:.71rem;color:var(--txt2);display:flex;justify-content:space-between;border-top:1px solid var(--border)}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.65rem;font-weight:800;white-space:nowrap;letter-spacing:.02em}
+.badge-crit{background:#FFEBEE;color:var(--alert)}
+.badge-warn{background:#FFF3E0;color:var(--warn)}
+.badge-ok{background:#E8F5E9;color:var(--ok)}
+.badge-info{background:#E3F2FD;color:var(--aq-dark)}
+.badge-gray{background:var(--aq-lgray);color:var(--aq-gray)}
+.dias-crit{color:var(--alert);font-weight:800}
+.dias-warn{color:var(--warn);font-weight:700}
+.dias-ok{color:var(--ok);font-weight:600}
+
+/* ── CARDS CLIENTES ── */
+.cli-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:18px}
+.cli-card{background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);cursor:pointer;transition:transform .15s;border-left:5px solid var(--aq-royal)}
+.cli-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,43,91,.15)}
+.cli-card.vencido{border-left-color:var(--alert)}
+.cli-card-header{background:var(--aq-dark);padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.cli-card.vencido .cli-card-header{background:var(--alert)}
+.cli-name{color:#fff;font-size:.78rem;font-weight:700;line-height:1.3}
+.cli-cod{color:rgba(255,255,255,.65);font-size:.64rem}
+.cli-card-body{padding:12px 14px}
+.cli-item{padding:7px 0;border-bottom:1px solid var(--border);font-size:.74rem}
+.cli-item:last-child{border-bottom:none}
+.cli-item-prod{font-weight:700;color:var(--aq-dark);margin-bottom:2px}
+.cli-item-meta{color:var(--txt2);font-size:.68rem;display:flex;gap:12px;flex-wrap:wrap}
+
+/* ── PROD CHARTS ── */
+.prod-bar-item{background:var(--card);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);display:flex;align-items:center;gap:16px;cursor:pointer;transition:background .12s}
+.prod-bar-item:hover{background:#F0F5FF}
+.prod-bar-info{flex:1}
+.prod-bar-name{font-weight:700;font-size:.8rem;color:var(--aq-dark)}
+.prod-bar-detail{font-size:.68rem;color:var(--txt2);margin-top:2px}
+.prod-bar-track{flex:2;background:var(--border);border-radius:6px;height:10px;overflow:hidden}
+.prod-bar-fill{height:10px;border-radius:6px;background:var(--aq-royal);transition:width .4s}
+.prod-bar-count{min-width:60px;text-align:right;font-weight:800;font-size:.88rem;color:var(--alert)}
+
+/* ── ANOMALIAS ── */
+.anom-card{background:var(--card);border-radius:var(--radius);padding:14px 18px;margin-bottom:12px;box-shadow:var(--shadow);border-left:5px solid var(--alert)}
+.anom-card.warn{border-left-color:var(--warn)}
+.anom-card.info{border-left-color:var(--aq-light)}
+.anom-title{font-size:.8rem;font-weight:800;color:var(--alert);margin-bottom:5px}
+.anom-card.warn .anom-title{color:var(--warn)}
+.anom-card.info .anom-title{color:var(--aq-dark)}
+.anom-desc{font-size:.74rem;color:var(--txt2);line-height:1.5}
+
+/* ── PROMOTOR ── */
+.prom-item{background:var(--card);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:background .12s}
+.prom-item:hover{background:#F0F5FF}
+.prom-name{font-weight:700;font-size:.82rem;color:var(--aq-dark)}
+.prom-bar-wrap{flex:1;margin:0 18px}
+.prom-bar-bg{background:var(--border);border-radius:5px;height:8px;overflow:hidden}
+.prom-bar-fg{height:8px;border-radius:5px;background:var(--aq-royal)}
+.prom-pct{font-size:.68rem;color:var(--txt2);margin-top:2px;text-align:right}
+.prom-count{font-size:1.4rem;font-weight:800;color:var(--alert);min-width:40px;text-align:right}
+
+/* ── HISTÓRICO ── */
+.hist-row-dev{color:var(--ok)}
+.hist-row-pend{color:var(--alert)}
+
+/* ── EMPTY ── */
+.empty-state{text-align:center;padding:50px;color:var(--txt2)}
+.empty-icon{font-size:2.5rem;margin-bottom:10px}
+
+@media(max-width:768px){
+  main{padding:12px 14px}
+  .topbar{padding:0 14px}
+  .nav{padding:0 14px}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .cli-grid{grid-template-columns:1fr}
+  .filter-bar input{min-width:140px}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <div class="logo-mark">
+      <div class="box box-filled"></div>
+      <div class="box half"></div>
+    </div>
+    <div class="brand-text">
+      <span class="brand-name">AGROQUIMA</span>
+      <span class="brand-sub">Auditoria · Empréstimo de Equipamentos</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-date" id="dt-display">—</span>
+    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+      📂 Carregar Planilha
+    </button>
+    <input type="file" id="fileInput" accept=".xls,.xlsx" onchange="handleFile(event)">
+  </div>
+</header>
+
+<!-- ALERTA -->
+<div class="alert-bar" id="alertBar">
+  ⚠️ <span id="alertMsg">—</span>
+</div>
+
+<!-- NAVEGAÇÃO -->
+<nav class="nav" id="mainNav" style="display:none">
+  <div class="ntab active" onclick="showTab('resumo',this)">📊 Resumo</div>
+  <div class="ntab" onclick="showTab('pendentes',this)">🔴 Pendentes <span class="nbadge" id="nbPend">0</span></div>
+  <div class="ntab" onclick="showTab('clientes',this)">👥 Clientes</div>
+  <div class="ntab" onclick="showTab('produtos',this)">🔧 Produtos</div>
+  <div class="ntab" onclick="showTab('promotores',this)">👤 Promotores</div>
+  <div class="ntab" onclick="showTab('historico',this)">📋 Histórico</div>
+  <div class="ntab" onclick="showTab('anomalias',this)">⚠️ Anomalias <span class="nbadge" id="nbAnom">0</span></div>
+</nav>
+
+<main>
+<!-- UPLOAD STATE -->
+<div id="uploadZone" class="upload-zone">
+  <div class="upload-icon">📋</div>
+  <h2 class="upload-title">Controle de Empréstimos</h2>
+  <p class="upload-desc">Carregue a planilha <strong>TabelaEmprestimoEquipamento.xls</strong> para iniciar a auditoria. O painel processa e exibe todos os dados automaticamente.</p>
+  <div class="upload-drop" id="dropZone" onclick="document.getElementById('fileInput').click()"
+       ondragover="ev.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')"
+       ondrop="handleDrop(event)">
+    <div style="font-size:2rem;margin-bottom:10px">⬆️</div>
+    <div style="font-weight:700;color:var(--aq-dark);margin-bottom:6px">Arraste o arquivo aqui</div>
+    <div style="font-size:.78rem;color:var(--txt2)">ou clique para selecionar</div>
+    <button class="upload-drop-btn">Selecionar arquivo</button>
+  </div>
+</div>
+
+<!-- RESUMO -->
+<div class="pnl" id="pnl-resumo">
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" id="resumoCharts"></div>
+</div>
+
+<!-- PENDENTES -->
+<div class="pnl" id="pnl-pendentes">
+  <div class="filter-bar">
+    <div class="filter-group">
+      <input type="text" id="fPendSearch" placeholder="🔍 Buscar cliente, produto, NF..." oninput="renderPendentes()">
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Status</span>
+      <select id="fPendStatus" onchange="renderPendentes()">
+        <option value="">Todos</option>
+        <option value="critico">🔴 Crítico (>365d)</option>
+        <option value="grave">🟠 Grave (>180d)</option>
+        <option value="vencido">🟡 Vencido (>60d)</option>
+        <option value="ok">🟢 No prazo (≤60d)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Produto</span>
+      <select id="fPendProd" onchange="renderPendentes()"><option value="">Todos</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Promotor</span>
+      <select id="fPendProm" onchange="renderPendentes()"><option value="">Todos</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Ordenar</span>
+      <select id="fPendSort" onchange="renderPendentes()">
+        <option value="dias_desc">Mais antigos primeiro</option>
+        <option value="dias_asc">Mais recentes primeiro</option>
+        <option value="cliente">Cliente A→Z</option>
+        <option value="nf">Nº NF</option>
+      </select>
+    </div>
+    <button class="btn btn-ghost" onclick="limparFiltrosPend()">✕ Limpar</button>
+  </div>
+  <div class="active-filters" id="activeFiltPend"></div>
+  <div class="table-wrap">
+    <div class="table-head-row">
+      <span class="table-head-title">Empréstimos sem devolução registrada</span>
+      <div class="table-head-right">
+        <span class="tcount" id="cntPend">—</span>
+        <button class="btn-csv" onclick="exportCSV('pendentes')">⬇ CSV</button>
+      </div>
+    </div>
+    <table>
+      <thead><tr>
+        <th></th>
+        <th onclick="sortPend('cliNome')">Cliente <span class="sort-arrow">↕</span></th>
+        <th onclick="sortPend('prodDesc')">Produto <span class="sort-arrow">↕</span></th>
+        <th onclick="sortPend('nfSaida')">NF Saída <span class="sort-arrow">↕</span></th>
+        <th onclick="sortPend('data')">Data Saída <span class="sort-arrow">↕</span></th>
+        <th onclick="sortPend('dias')">Dias em Aberto <span class="sort-arrow">↕</span></th>
+        <th>Status</th>
+        <th onclick="sortPend('promotorNome')">Promotor <span class="sort-arrow">↕</span></th>
+        <th>Patrimônio</th>
+      </tr></thead>
+      <tbody id="tbodyPend"></tbody>
+    </table>
+    <div class="tfoot-row">
+      <span id="tfootPend">—</span>
+      <span style="color:var(--alert);font-weight:700">⚠️ Limite: 60 dias — a filial perde pontuação após este prazo</span>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENTES -->
+<div class="pnl" id="pnl-clientes">
+  <div class="filter-bar">
+    <input type="text" id="fCliSearch" placeholder="🔍 Buscar cliente..." oninput="renderClientes()">
+    <select id="fCliStatus" onchange="renderClientes()">
+      <option value="">Todos</option>
+      <option value="vencido">🔴 Com vencidos</option>
+      <option value="ok">🟢 No prazo</option>
+    </select>
+    <select id="fCliSort" onchange="renderClientes()">
+      <option value="dias_desc">Mais crítico primeiro</option>
+      <option value="qtde_desc">Mais pendências</option>
+      <option value="nome">Nome A→Z</option>
+    </select>
+    <button class="btn btn-ghost" onclick="limparFiltrosCli()">✕ Limpar</button>
+  </div>
+  <div class="cli-grid" id="cliGrid"></div>
+</div>
+
+<!-- PRODUTOS -->
+<div class="pnl" id="pnl-produtos">
+  <div class="sec-title">🔧 Pendências por equipamento</div>
+  <div id="prodBars"></div>
+  <div class="table-wrap" style="margin-top:18px">
+    <div class="table-head-row"><span class="table-head-title">Detalhamento por produto</span></div>
+    <table><thead><tr>
+      <th>Código</th><th>Produto</th><th>Pendentes</th><th>Devolvidos</th><th>Total Saídas</th><th>Mais Antiga</th><th>Dias Máx</th><th>Status</th>
+    </tr></thead><tbody id="tbodyProd"></tbody></table>
+  </div>
+</div>
+
+<!-- PROMOTORES -->
+<div class="pnl" id="pnl-promotores">
+  <div class="sec-title">👤 Responsabilidade por promotor</div>
+  <div id="promList"></div>
+  <div class="table-wrap" style="margin-top:18px">
+    <div class="table-head-row"><span class="table-head-title">Pendentes por promotor — detalhado</span></div>
+    <table><thead><tr>
+      <th>Promotor</th><th>Pendentes</th><th>Clientes</th><th>Vencidos >60d</th><th>Mais Antigo</th><th>% do Total</th>
+    </tr></thead><tbody id="tbodyProm"></tbody></table>
+  </div>
+</div>
+
+<!-- HISTÓRICO -->
+<div class="pnl" id="pnl-historico">
+  <div class="filter-bar">
+    <input type="text" id="fHistSearch" placeholder="🔍 Buscar..." oninput="renderHistorico()">
+    <select id="fHistTipo" onchange="renderHistorico()">
+      <option value="">Entrada e Saída</option>
+      <option value="Saída">Saídas</option>
+      <option value="Entrada">Entradas</option>
+    </select>
+    <select id="fHistProd" onchange="renderHistorico()"><option value="">Todos os produtos</option></select>
+    <button class="btn btn-ghost" onclick="limparFiltrosHist()">✕ Limpar</button>
+    <button class="btn-csv" onclick="exportCSV('historico')" style="margin-left:auto">⬇ CSV completo</button>
+  </div>
+  <div class="table-wrap">
+    <div class="table-head-row">
+      <span class="table-head-title">Todas as movimentações</span>
+      <span class="tcount" id="cntHist">—</span>
+    </div>
+    <table><thead><tr>
+      <th>Tipo</th><th>Cliente</th><th>Produto</th><th>NF Saída</th><th>NF Entrada</th><th>Data</th><th>Promotor</th><th>Situação</th>
+    </tr></thead><tbody id="tbodyHist"></tbody></table>
+    <div class="tfoot-row"><span id="tfootHist">—</span></div>
+  </div>
+</div>
+
+<!-- ANOMALIAS -->
+<div class="pnl" id="pnl-anomalias">
+  <div id="anomList"></div>
+</div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ════════════════════════════════════════════════════════
+let DADOS = null;
+let sortPendCol = 'dias', sortPendAsc = false;
+const HOJE = new Date();
+
+document.getElementById('dt-display').textContent =
+  HOJE.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+
+// ════════════════════════════════════════════════════════
+//  UPLOAD / LEITURA DA PLANILHA
+// ════════════════════════════════════════════════════════
+function handleFile(ev){ const f=ev.target.files[0]; if(f) readXLS(f); }
+function handleDrop(ev){
+  ev.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag');
+  const f=ev.dataTransfer.files[0];
+  if(f && (f.name.endsWith('.xls')||f.name.endsWith('.xlsx'))) readXLS(f);
+}
+
+function readXLS(file){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:null});
+      processData(rows);
+    }catch(err){alert('Erro ao ler planilha: '+err.message);}
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ════════════════════════════════════════════════════════
+//  PROCESSAMENTO DOS DADOS
+// ════════════════════════════════════════════════════════
+function processData(rows){
+  const COL = {
+    filial:'Filial', cliente:'Cliente', produto:'Produto', patrimonio:'Nº Patrimônio',
+    data:'Data Movimento', tipo:'Entrada/Saída', nfEnt:'NF Entrada',
+    qtEnt:'Qt Entrada', nfSai:'NF Saída', qtSai:'Qt Saída', promotor:'Promotor', pedido:'Pedido'
+  };
+
+  function parseCampo(v, tipo='c'){
+    const s = String(v||'').trim();
+    const i = s.indexOf(' - ');
+    if(i>-1) return tipo==='c'?{cod:s.slice(0,i),nome:s.slice(i+3)}:{cod:s.slice(0,i),desc:s.slice(i+3)};
+    return tipo==='c'?{cod:'',nome:s}:{cod:'',desc:s};
+  }
+  function parseData(v){
+    if(!v) return null;
+    if(v instanceof Date) return v;
+    const s=String(v).trim();
+    const [d,m,a]=s.split('/');
+    if(d&&m&&a) return new Date(+a,+m-1,+d);
+    return new Date(s);
+  }
+  function dias(d){ if(!d) return 0; return Math.round((HOJE-d)/(86400000)); }
+
+  const saidas=[], entradas=[];
+  rows.forEach(r=>{
+    const tipo = String(r[COL.tipo]||'').trim();
+    const nfSai = r[COL.nfSai]?+r[COL.nfSai]:null;
+    const nfEnt = r[COL.nfEnt]?+r[COL.nfEnt]:null;
+    const data = parseData(r[COL.data]);
+    const cli = parseCampo(r[COL.cliente],'c');
+    const prod = parseCampo(r[COL.produto],'p');
+    const prom = parseCampo(r[COL.promotor],'c');
+    const fil = parseCampo(r[COL.filial],'p');
+    const obj = {
+      filCod:fil.cod, filDesc:fil.desc,
+      cliCod:cli.cod, cliNome:cli.nome,
+      prodCod:prod.cod, prodDesc:prod.desc,
+      patrimonio:String(r[COL.patrimonio]||'').trim(),
+      data, dataStr: data?data.toLocaleDateString('pt-BR'):'—',
+      tipo, nfSai, nfEnt,
+      promotorCod:prom.cod, promotorNome:prom.nome,
+      pedido:String(r[COL.pedido]||'').trim(),
+    };
+    if(tipo==='Saída') saidas.push(obj);
+    else if(tipo==='Entrada') entradas.push(obj);
+  });
+
+  // Vinculação saída → entrada por nfSai
+  const nfDevMap = {}; // nfSai → entrada
+  entradas.forEach(e=>{ if(e.nfSai) nfDevMap[e.nfSai]=e; });
+  const nfTodasSaida = new Set(saidas.map(s=>s.nfSai).filter(Boolean));
+
+  const pendentes=[], devolvidos=[];
+  saidas.forEach(s=>{
+    const d = dias(s.data);
+    s.dias = d;
+    s.vencido = d>60;
+    s.devolvido = s.nfSai && !!nfDevMap[s.nfSai];
+    if(s.devolvido){
+      const ent = nfDevMap[s.nfSai];
+      s.dataRetorno = ent.data;
+      s.dataRetornoStr = ent.data?ent.data.toLocaleDateString('pt-BR'):'—';
+      s.diasEmprestado = ent.data?Math.round((ent.data-s.data)/86400000):0;
+      s.vencidoNaEpoca = s.diasEmprestado>60;
+      s.nfEntrada = ent.nfEnt;
+      devolvidos.push(s);
+    } else pendentes.push(s);
+  });
+
+  // Entradas órfãs e duplicadas
+  const orfas = entradas.filter(e=>e.nfSai&&!nfTodasSaida.has(e.nfSai));
+  const dupMap = {};
+  entradas.forEach(e=>{ if(e.nfSai){dupMap[e.nfSai]=(dupMap[e.nfSai]||0)+1;} });
+  const dupRetorno = Object.entries(dupMap).filter(([,v])=>v>1).map(([k,v])=>({nf:+k,qtd:v}));
+
+  // Estatísticas
+  const vencidos60 = pendentes.filter(p=>p.dias>60).length;
+  const noPrazo = pendentes.filter(p=>p.dias<=60).length;
+  const diasMax = pendentes.length?Math.max(...pendentes.map(p=>p.dias)):0;
+  const diasMed = devolvidos.length?Math.round(devolvidos.reduce((s,d)=>s+d.diasEmprestado,0)/devolvidos.length):0;
+  const vencNaEpoca = devolvidos.filter(d=>d.vencidoNaEpoca).length;
+
+  DADOS = {
+    todos: rows, saidas, entradas, pendentes, devolvidos,
+    orfas, dupRetorno,
+    resumo:{
+      totalRegistros:rows.length, totalSaidas:saidas.length, totalEntradas:entradas.length,
+      totalPendentes:pendentes.length, totalDevolvidos:devolvidos.length,
+      vencidos60, noPrazo, diasMax, diasMed, vencNaEpoca,
+      txDev:saidas.length?Math.round(devolvidos.length/saidas.length*100):0,
+      orfas:orfas.length, dupRetorno:dupRetorno.length,
+    }
+  };
+
+  showDashboard();
+}
+
+// ════════════════════════════════════════════════════════
+//  INICIALIZAR DASHBOARD
+// ════════════════════════════════════════════════════════
+function showDashboard(){
+  document.getElementById('uploadZone').style.display='none';
+  document.getElementById('mainNav').style.display='flex';
+  document.querySelectorAll('.pnl').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pnl-resumo').classList.add('active');
+
+  const {resumo} = DADOS;
+  // Alert bar
+  const ab=document.getElementById('alertBar');
+  if(resumo.vencidos60>0){
+    ab.classList.add('show');
+    document.getElementById('alertMsg').textContent=
+      `${resumo.vencidos60} equipamento${resumo.vencidos60>1?'s':''} com prazo VENCIDO (>60 dias) · Filial perde pontuação · Ação imediata necessária`;
+  }
+  // Nav badges
+  document.getElementById('nbPend').textContent = resumo.totalPendentes;
+  const anomCount = resumo.orfas + resumo.dupRetorno + (resumo.vencidos60>0?1:0);
+  document.getElementById('nbAnom').textContent = anomCount;
+
+  populateFilters();
+  renderKPIs();
+  renderResumoCharts();
+  renderPendentes();
+}
+
+// ════════════════════════════════════════════════════════
+//  FILTROS — popular selects
+// ════════════════════════════════════════════════════════
+function populateFilters(){
+  const prods = [...new Map(DADOS.pendentes.map(p=>[p.prodCod, p.prodDesc])).entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+  const proms = [...new Set(DADOS.pendentes.map(p=>p.promotorNome).filter(Boolean))].sort();
+
+  ['fPendProd','fHistProd'].forEach(id=>{
+    const sel=document.getElementById(id); sel.innerHTML='<option value="">Todos</option>';
+    prods.forEach(([c,d])=>{ const o=document.createElement('option'); o.value=c; o.textContent=`${c} - ${d.substring(0,30)}`; sel.appendChild(o); });
+  });
+  const pp=document.getElementById('fPendProm'); pp.innerHTML='<option value="">Todos</option>';
+  proms.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n.substring(0,35); pp.appendChild(o); });
+}
+
+// ════════════════════════════════════════════════════════
+//  KPIs
+// ════════════════════════════════════════════════════════
+function renderKPIs(){
+  const r=DADOS.resumo;
+  const cards=[
+    {label:'Equipamentos em aberto',val:r.totalPendentes,sub:`de ${r.totalSaidas} saídas registradas`,cls:'red',click:"showTab('pendentes',null);filtrarStatus('vencido')"},
+    {label:'⚠️ Vencidos (>60 dias)',val:r.vencidos60,sub:'Filial perde pontuação',cls:'red',click:"showTab('pendentes',null);filtrarStatus('vencido')"},
+    {label:'No prazo (≤60 dias)',val:r.noPrazo,sub:'dentro do limite',cls:'amber',click:"showTab('pendentes',null);filtrarStatus('ok')"},
+    {label:'✅ Devolvidos',val:r.totalDevolvidos,sub:`${r.txDev}% de devolução`,cls:'green',click:"showTab('historico',null)"},
+    {label:'Dias máx. em aberto',val:r.diasMax,sub:'equipamento mais antigo',cls:'red',click:"showTab('pendentes',null)"},
+    {label:'Média dias emprestado',val:r.diasMed,sub:'dos devolvidos',cls:'blue',click:"showTab('historico',null)"},
+    {label:'Devolvidos fora do prazo',val:r.vencNaEpoca,sub:'retornaram, mas atrasados',cls:'amber',click:"showTab('historico',null)"},
+    {label:'Anomalias detectadas',val:r.orfas+r.dupRetorno,sub:'entradas órfãs + NF dup.',cls:'amber',click:"showTab('anomalias',null)"},
+  ];
+  document.getElementById('kpiGrid').innerHTML=cards.map(c=>`
+    <div class="kpi-card ${c.cls}" onclick="${c.click}" title="Clique para detalhar">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value">${c.val}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+//  RESUMO CHARTS (mini resumos)
+// ════════════════════════════════════════════════════════
+function renderResumoCharts(){
+  // Top produtos pendentes
+  const pm={}; DADOS.pendentes.forEach(p=>{
+    if(!pm[p.prodCod])pm[p.prodCod]={cod:p.prodCod,desc:p.prodDesc,qtde:0,dias:0};
+    pm[p.prodCod].qtde++; pm[p.prodCod].dias=Math.max(pm[p.prodCod].dias,p.dias);
+  });
+  const topProd=Object.values(pm).sort((a,b)=>b.qtde-a.qtde).slice(0,5);
+  const maxQ=topProd[0]?.qtde||1;
+
+  // Top clientes pendentes
+  const cm={}; DADOS.pendentes.forEach(p=>{
+    if(!cm[p.cliCod])cm[p.cliCod]={cod:p.cliCod,nome:p.cliNome,qtde:0,dias:0};
+    cm[p.cliCod].qtde++; cm[p.cliCod].dias=Math.max(cm[p.cliCod].dias,p.dias);
+  });
+  const topCli=Object.values(cm).sort((a,b)=>b.qtde-a.qtde).slice(0,5);
+  const maxC=topCli[0]?.qtde||1;
+
+  document.getElementById('resumoCharts').innerHTML=`
+    <div>
+      <div class="sec-title">🔧 Top produtos com mais pendências</div>
+      ${topProd.map(p=>`<div class="prod-bar-item" onclick="showTab('produtos',null)">
+        <div class="prod-bar-info">
+          <div class="prod-bar-name">${p.desc.substring(0,40)}</div>
+          <div class="prod-bar-detail">Cód. ${p.cod} · Máx. ${p.dias} dias</div>
+        </div>
+        <div class="prod-bar-track"><div class="prod-bar-fill" style="width:${Math.round(p.qtde/maxQ*100)}%"></div></div>
+        <div class="prod-bar-count">${p.qtde}</div>
+      </div>`).join('')}
+    </div>
+    <div>
+      <div class="sec-title">👥 Top clientes com mais pendências</div>
+      ${topCli.map(c=>`<div class="prod-bar-item" onclick="showTab('clientes',null)">
+        <div class="prod-bar-info">
+          <div class="prod-bar-name">${c.nome.substring(0,38)}</div>
+          <div class="prod-bar-detail">Cód. ${c.cod} · Máx. ${c.dias} dias</div>
+        </div>
+        <div class="prod-bar-track"><div class="prod-bar-fill" style="width:${Math.round(c.qtde/maxC*100)}%;background:var(--alert)"></div></div>
+        <div class="prod-bar-count">${c.qtde}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+//  PENDENTES
+// ════════════════════════════════════════════════════════
+function stDias(d){
+  if(d>365)return{label:'Crítico >1 ano',cls:'badge-crit',dcls:'dias-crit'};
+  if(d>180)return{label:'Grave >6m',cls:'badge-crit',dcls:'dias-crit'};
+  if(d>60)return{label:'Vencido',cls:'badge-warn',dcls:'dias-warn'};
+  return{label:'No prazo',cls:'badge-ok',dcls:'dias-ok'};
+}
+
+function renderPendentes(){
+  if(!DADOS) return;
+  const txt=(document.getElementById('fPendSearch').value||'').toLowerCase();
+  const status=document.getElementById('fPendStatus').value;
+  const prod=document.getElementById('fPendProd').value;
+  const prom=document.getElementById('fPendProm').value;
+
+  let f=DADOS.pendentes.filter(p=>{
+    const mn=!txt||(p.cliNome+p.prodDesc+String(p.nfSai)).toLowerCase().includes(txt);
+    const mp=!prod||p.prodCod===prod;
+    const mm=!prom||p.promotorNome===prom;
+    let ms=true;
+    if(status==='critico')ms=p.dias>365;
+    else if(status==='grave')ms=p.dias>180&&p.dias<=365;
+    else if(status==='vencido')ms=p.dias>60;
+    else if(status==='ok')ms=p.dias<=60;
+    return mn&&mp&&mm&&ms;
+  });
+
+  const sortSel=document.getElementById('fPendSort').value;
+  if(sortSel==='dias_desc')f.sort((a,b)=>b.dias-a.dias);
+  else if(sortSel==='dias_asc')f.sort((a,b)=>a.dias-b.dias);
+  else if(sortSel==='cliente')f.sort((a,b)=>a.cliNome.localeCompare(b.cliNome));
+  else if(sortSel==='nf')f.sort((a,b)=>a.nfSai-b.nfSai);
+
+  document.getElementById('cntPend').textContent=`${f.length} reg.`;
+  document.getElementById('tfootPend').textContent=`Exibindo ${f.length} de ${DADOS.pendentes.length} pendentes`;
+
+  const tbody=document.getElementById('tbodyPend');
+  if(!f.length){tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">✅</div><div>Nenhum pendente com estes filtros</div></div></td></tr>';return;}
+
+  tbody.innerHTML=f.map((p,i)=>{
+    const s=stDias(p.dias);
+    const rowId=`pr-${i}`;
+    return`<tr onclick="toggleExpand('${rowId}',${i},'pend')" id="tr-${rowId}">
+      <td><span style="color:var(--aq-light);font-size:1rem" id="ic-${rowId}">▶</span></td>
+      <td><strong>${p.cliNome.substring(0,35)}</strong><br><span style="font-size:.65rem;color:var(--txt2)">Cód. ${p.cliCod}</span></td>
+      <td style="font-size:.73rem">${p.prodDesc.substring(0,35)}<br><span style="color:var(--txt2);font-size:.63rem">Cód. ${p.prodCod}</span></td>
+      <td style="font-family:monospace;font-weight:700;color:var(--aq-dark)">${p.nfSai||'—'}</td>
+      <td>${p.dataStr}</td>
+      <td><span class="${s.dcls}">${p.dias} dias</span></td>
+      <td><span class="badge ${s.cls}">${s.label}</span></td>
+      <td style="font-size:.71rem">${(p.promotorNome||'—').substring(0,25)}</td>
+      <td style="font-family:monospace;font-size:.71rem">${p.patrimonio}</td>
+    </tr>
+    <tr class="expand-row" id="exp-${rowId}" style="display:none">
+      <td colspan="9"><div class="expand-inner">
+        <div class="expand-field"><span class="expand-label">Filial</span><span class="expand-value">${p.filCod} - ${p.filDesc}</span></div>
+        <div class="expand-field"><span class="expand-label">Cliente completo</span><span class="expand-value">${p.cliCod} - ${p.cliNome}</span></div>
+        <div class="expand-field"><span class="expand-label">Produto completo</span><span class="expand-value">${p.prodCod} - ${p.prodDesc}</span></div>
+        <div class="expand-field"><span class="expand-label">Nº Patrimônio</span><span class="expand-value">${p.patrimonio}</span></div>
+        <div class="expand-field"><span class="expand-label">NF Saída</span><span class="expand-value" style="font-family:monospace">${p.nfSai}</span></div>
+        <div class="expand-field"><span class="expand-label">Data de Saída</span><span class="expand-value">${p.dataStr}</span></div>
+        <div class="expand-field"><span class="expand-label">Dias em aberto</span><span class="expand-value" style="color:${p.dias>60?'var(--alert)':'var(--ok)'}">${p.dias} dias (${p.vencido?'VENCIDO':'no prazo'})</span></div>
+        <div class="expand-field"><span class="expand-label">Promotor</span><span class="expand-value">${p.promotorCod} - ${p.promotorNome}</span></div>
+        <div class="expand-field"><span class="expand-label">Pedido</span><span class="expand-value" style="font-family:monospace">${p.pedido||'—'}</span></div>
+        <div class="expand-field"><span class="expand-label">Vencimento (60d)</span><span class="expand-value" style="color:var(--alert)">${venc60(p.data)}</span></div>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function venc60(d){if(!d)return'—';const v=new Date(d);v.setDate(v.getDate()+60);return v.toLocaleDateString('pt-BR');}
+
+function toggleExpand(id,i,tipo){
+  const exp=document.getElementById('exp-'+id);
+  const tr=document.getElementById('tr-'+id);
+  const ic=document.getElementById('ic-'+id);
+  const vis=exp.style.display==='none';
+  exp.style.display=vis?'table-row':'none';
+  tr.classList.toggle('expanded',vis);
+  ic.textContent=vis?'▼':'▶';
+}
+
+function sortPend(col){
+  DADOS.pendentes.sort((a,b)=>{
+    const av=a[col]||'',bv=b[col]||'';
+    if(typeof av==='number')return sortPendAsc?av-bv:bv-av;
+    return sortPendAsc?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));
+  });
+  sortPendAsc=!sortPendAsc;
+  renderPendentes();
+}
+
+function filtrarStatus(s){ document.getElementById('fPendStatus').value=s; renderPendentes(); }
+function limparFiltrosPend(){ ['fPendSearch','fPendStatus','fPendProd','fPendProm'].forEach(id=>document.getElementById(id).value=''); renderPendentes(); }
+
+// ════════════════════════════════════════════════════════
+//  CLIENTES
+// ════════════════════════════════════════════════════════
+function renderClientes(){
+  if(!DADOS) return;
+  const txt=(document.getElementById('fCliSearch').value||'').toLowerCase();
+  const filtStatus=document.getElementById('fCliStatus').value;
+  const sortV=document.getElementById('fCliSort').value;
+
+  const cm={};
+  DADOS.pendentes.forEach(p=>{
+    if(!cm[p.cliCod])cm[p.cliCod]={cod:p.cliCod,nome:p.cliNome,items:[],diasMax:0,vencido:false};
+    cm[p.cliCod].items.push(p);
+    cm[p.cliCod].diasMax=Math.max(cm[p.cliCod].diasMax,p.dias);
+    if(p.dias>60)cm[p.cliCod].vencido=true;
+  });
+
+  let rows=Object.values(cm).filter(c=>{
+    const mn=!txt||c.nome.toLowerCase().includes(txt)||c.cod.includes(txt);
+    const ms=!filtStatus||(filtStatus==='vencido'?c.vencido:!c.vencido);
+    return mn&&ms;
+  });
+
+  if(sortV==='dias_desc')rows.sort((a,b)=>b.diasMax-a.diasMax);
+  else if(sortV==='qtde_desc')rows.sort((a,b)=>b.items.length-a.items.length);
+  else rows.sort((a,b)=>a.nome.localeCompare(b.nome));
+
+  document.getElementById('cliGrid').innerHTML=rows.map(c=>`
+    <div class="cli-card${c.vencido?' vencido':''}" onclick="showTab('pendentes',null);document.getElementById('fPendSearch').value='${c.nome.substring(0,20)}';renderPendentes()">
+      <div class="cli-card-header">
+        <div>
+          <div class="cli-name">${c.nome.substring(0,40)}</div>
+          <div class="cli-cod">Cód. ${c.cod}</div>
+        </div>
+        <span class="badge ${c.vencido?'badge-crit':'badge-ok'}">${c.items.length} equip.</span>
+      </div>
+      <div class="cli-card-body">
+        ${c.items.sort((a,b)=>b.dias-a.dias).map(p=>`
+          <div class="cli-item">
+            <div class="cli-item-prod">${p.prodDesc.substring(0,38)}</div>
+            <div class="cli-item-meta">
+              <span>NF <strong>${p.nfSai}</strong></span>
+              <span>${p.dataStr}</span>
+              <span class="${p.dias>60?'dias-crit':'dias-ok'}">${p.dias} dias</span>
+              <span class="badge ${stDias(p.dias).cls}">${stDias(p.dias).label}</span>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('')||'<div class="empty-state"><div class="empty-icon">✅</div><div>Nenhum cliente pendente</div></div>';
+}
+
+function limparFiltrosCli(){ ['fCliSearch','fCliStatus'].forEach(id=>document.getElementById(id).value=''); renderClientes(); }
+
+// ════════════════════════════════════════════════════════
+//  PRODUTOS
+// ════════════════════════════════════════════════════════
+function renderProdutos(){
+  if(!DADOS) return;
+  const pm={};
+  DADOS.pendentes.forEach(p=>{
+    if(!pm[p.prodCod])pm[p.prodCod]={cod:p.prodCod,desc:p.prodDesc,pend:0,diasMax:0,dataMin:null};
+    pm[p.prodCod].pend++; pm[p.prodCod].diasMax=Math.max(pm[p.prodCod].diasMax,p.dias);
+    if(!pm[p.prodCod].dataMin||p.data<pm[p.prodCod].dataMin)pm[p.prodCod].dataMin=p.data;
+  });
+  const devMap={};
+  DADOS.devolvidos.forEach(d=>{devMap[d.prodCod]=(devMap[d.prodCod]||0)+1;});
+
+  const rows=Object.values(pm).sort((a,b)=>b.pend-a.pend);
+  const maxP=rows[0]?.pend||1;
+
+  document.getElementById('prodBars').innerHTML=rows.map(r=>`
+    <div class="prod-bar-item">
+      <div class="prod-bar-info">
+        <div class="prod-bar-name">${r.cod} - ${r.desc.substring(0,45)}</div>
+        <div class="prod-bar-detail">Dias máx: ${r.diasMax} · Mais antiga: ${r.dataMin?r.dataMin.toLocaleDateString('pt-BR'):'—'}</div>
+      </div>
+      <div class="prod-bar-track"><div class="prod-bar-fill" style="width:${Math.round(r.pend/maxP*100)}%"></div></div>
+      <div class="prod-bar-count">${r.pend}</div>
+    </div>`).join('');
+
+  document.getElementById('tbodyProd').innerHTML=rows.map(r=>{
+    const dev=devMap[r.cod]||0; const tot=r.pend+dev; const s=stDias(r.diasMax);
+    return`<tr>
+      <td style="font-family:monospace">${r.cod}</td>
+      <td><strong>${r.desc.substring(0,45)}</strong></td>
+      <td style="font-weight:800;color:var(--alert)">${r.pend}</td>
+      <td style="color:var(--ok);font-weight:700">${dev}</td>
+      <td>${tot}</td>
+      <td>${r.dataMin?r.dataMin.toLocaleDateString('pt-BR'):'—'}</td>
+      <td><span class="${s.dcls}">${r.diasMax}</span></td>
+      <td><span class="badge ${s.cls}">${s.label}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════
+//  PROMOTORES
+// ════════════════════════════════════════════════════════
+function renderPromotores(){
+  if(!DADOS) return;
+  const pm={};
+  DADOS.pendentes.forEach(p=>{
+    const k=p.promotorNome||'Não informado';
+    if(!pm[k])pm[k]={nome:k,pend:0,clis:new Set(),venc:0,diasMax:0};
+    pm[k].pend++; pm[k].clis.add(p.cliCod); if(p.dias>60)pm[k].venc++; pm[k].diasMax=Math.max(pm[k].diasMax,p.dias);
+  });
+  const rows=Object.values(pm).sort((a,b)=>b.pend-a.pend);
+  const total=rows.reduce((s,r)=>s+r.pend,0);
+
+  document.getElementById('promList').innerHTML=rows.map(r=>{
+    const pct=Math.round(r.pend/total*100);
+    return`<div class="prom-item" onclick="showTab('pendentes',null);document.getElementById('fPendProm').value='${r.nome}';renderPendentes()">
+      <div style="min-width:200px"><div class="prom-name">${r.nome.substring(0,38)}</div><div style="font-size:.68rem;color:var(--txt2)">${r.clis.size} clientes · ${r.venc} vencidos</div></div>
+      <div class="prom-bar-wrap"><div class="prom-bar-bg"><div class="prom-bar-fg" style="width:${pct}%"></div></div><div class="prom-pct">${pct}% do total</div></div>
+      <div class="prom-count">${r.pend}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('tbodyProm').innerHTML=rows.map(r=>`<tr onclick="showTab('pendentes',null);document.getElementById('fPendProm').value='${r.nome}';renderPendentes()" style="cursor:pointer">
+    <td><strong>${r.nome.substring(0,40)}</strong></td>
+    <td style="font-weight:800;color:var(--alert)">${r.pend}</td>
+    <td>${r.clis.size}</td>
+    <td style="color:${r.venc>0?'var(--alert)':'var(--ok)'};font-weight:700">${r.venc}</td>
+    <td><span class="${stDias(r.diasMax).dcls}">${r.diasMax}</span></td>
+    <td>${Math.round(r.pend/total*100)}%</td>
+  </tr>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+//  HISTÓRICO
+// ════════════════════════════════════════════════════════
+function renderHistorico(){
+  if(!DADOS) return;
+  const txt=(document.getElementById('fHistSearch').value||'').toLowerCase();
+  const tipo=document.getElementById('fHistTipo').value;
+  const prod=document.getElementById('fHistProd').value;
+
+  // Montar lista unificada
+  const todos=[];
+  DADOS.saidas.forEach(s=>{
+    const d=DADOS.devolvidos.find(d=>d.nfSai===s.nfSai);
+    todos.push({...s, situacao: d?'Devolvido':'Pendente'});
+  });
+  DADOS.entradas.forEach(e=>{
+    todos.push({...e, tipo:'Entrada', situacao:'Retorno', nfSai:e.nfSai});
+  });
+
+  let f=todos.filter(r=>{
+    const mn=!txt||(r.cliNome+r.prodDesc+String(r.nfSai||'')+String(r.nfEnt||'')).toLowerCase().includes(txt);
+    const mt=!tipo||r.tipo===tipo;
+    const mp=!prod||r.prodCod===prod;
+    return mn&&mt&&mp;
+  }).sort((a,b)=>(b.data||0)-(a.data||0));
+
+  document.getElementById('cntHist').textContent=`${f.length} reg.`;
+  document.getElementById('tfootHist').textContent=`${f.length} movimentações`;
+
+  document.getElementById('tbodyHist').innerHTML=f.slice(0,500).map(r=>{
+    const isSai=r.tipo==='Saída';
+    const sitCls=r.situacao==='Devolvido'?'badge-ok':r.situacao==='Pendente'?'badge-crit':'badge-info';
+    return`<tr>
+      <td><span class="badge ${isSai?'badge-warn':'badge-ok'}">${r.tipo}</span></td>
+      <td style="font-size:.74rem"><strong>${(r.cliNome||'—').substring(0,30)}</strong><br><span style="color:var(--txt2);font-size:.63rem">${r.cliCod}</span></td>
+      <td style="font-size:.7rem">${(r.prodDesc||'—').substring(0,30)}</td>
+      <td style="font-family:monospace;font-weight:600">${r.nfSai||'—'}</td>
+      <td style="font-family:monospace">${r.nfEnt||'—'}</td>
+      <td>${r.dataStr||'—'}</td>
+      <td style="font-size:.7rem">${(r.promotorNome||'—').substring(0,20)}</td>
+      <td><span class="badge ${sitCls}">${r.situacao}</span></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📋</div><div>Nenhum registro</div></div></td></tr>';
+}
+
+function limparFiltrosHist(){ ['fHistSearch','fHistTipo','fHistProd'].forEach(id=>document.getElementById(id).value=''); renderHistorico(); }
+
+// ════════════════════════════════════════════════════════
+//  ANOMALIAS
+// ════════════════════════════════════════════════════════
+function renderAnomalias(){
+  if(!DADOS) return;
+  const r=DADOS.resumo;
+  let html='';
+
+  // 1. Vencidos críticos
+  const crit=DADOS.pendentes.filter(p=>p.dias>365);
+  if(crit.length){
+    html+=`<div class="anom-card">
+      <div class="anom-title">🔴 ${crit.length} equipamentos sem retorno há mais de 1 ano — risco de perda patrimonial</div>
+      <div class="anom-desc">
+        <table style="width:100%;font-size:.72rem;border-collapse:collapse;margin-top:8px">
+          <tr style="background:#FFEBEE;font-weight:700"><td style="padding:4px 8px">NF</td><td style="padding:4px 8px">Cliente</td><td style="padding:4px 8px">Produto</td><td style="padding:4px 8px">Data</td><td style="padding:4px 8px">Dias</td><td style="padding:4px 8px">Promotor</td></tr>
+          ${crit.sort((a,b)=>b.dias-a.dias).map(p=>`<tr style="border-bottom:1px solid #FFCDD2">
+            <td style="padding:3px 8px;font-family:monospace;font-weight:700">${p.nfSai}</td>
+            <td style="padding:3px 8px">${p.cliNome.substring(0,35)}</td>
+            <td style="padding:3px 8px">${p.prodDesc.substring(0,28)}</td>
+            <td style="padding:3px 8px">${p.dataStr}</td>
+            <td style="padding:3px 8px;color:var(--alert);font-weight:800">${p.dias}</td>
+            <td style="padding:3px 8px">${p.promotorNome.substring(0,20)}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+    </div>`;
+  }
+
+  // 2. Clientes com múltiplos pendentes
+  const cm={};DADOS.pendentes.forEach(p=>{cm[p.cliCod]=(cm[p.cliCod]||0)+1;});
+  const multi=Object.entries(cm).filter(([,v])=>v>1).sort((a,b)=>b[1]-a[1]);
+  if(multi.length){
+    html+=`<div class="anom-card warn">
+      <div class="anom-title">🟠 Clientes com múltiplos equipamentos pendentes (${multi.length} clientes)</div>
+      <div class="anom-desc">
+        ${multi.map(([cod,qtd])=>{
+          const cli=DADOS.pendentes.find(p=>p.cliCod===cod);
+          return`<div style="padding:4px 0;border-bottom:1px solid #FFE0B2;font-size:.74rem"><strong>${cli?.cliNome.substring(0,40)||cod}</strong> — <span style="color:var(--alert);font-weight:700">${qtd} equipamentos</span></div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // 3. Entradas órfãs
+  if(DADOS.orfas.length){
+    html+=`<div class="anom-card warn">
+      <div class="anom-title">🟡 ${DADOS.orfas.length} entradas referenciando NF de saída inexistente na base</div>
+      <div class="anom-desc">Estas devoluções foram registradas, mas a saída correspondente não consta na planilha. Possível saída em período fora do arquivo ou NF incorreta.</div>
+    </div>`;
+  }
+
+  // 4. NF com múltiplas entradas
+  if(DADOS.dupRetorno.length){
+    html+=`<div class="anom-card warn">
+      <div class="anom-title">🟡 ${DADOS.dupRetorno.length} notas de saída com mais de uma devolução registrada</div>
+      <div class="anom-desc">
+        ${DADOS.dupRetorno.map(d=>`<div style="font-size:.73rem;padding:3px 0;border-bottom:1px solid #FFE0B2">NF <strong>${d.nf}</strong> → ${d.qtd} entradas vinculadas</div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // 5. Devolvidos atrasados (histórico)
+  const late=DADOS.devolvidos.filter(d=>d.vencidoNaEpoca);
+  if(late.length){
+    html+=`<div class="anom-card info">
+      <div class="anom-title" style="color:var(--aq-dark)">ℹ️ ${late.length} equipamentos devolvidos, porém fora do prazo de 60 dias</div>
+      <div class="anom-desc">Foram devolvidos, mas após o prazo — a filial pode ter perdido pontos no período. Média: ${Math.round(late.reduce((s,d)=>s+d.diasEmprestado,0)/late.length)} dias emprestados.</div>
+    </div>`;
+  }
+
+  if(!html) html='<div class="empty-state"><div class="empty-icon">✅</div><div style="font-weight:700;color:var(--ok)">Nenhuma anomalia detectada</div></div>';
+  document.getElementById('anomList').innerHTML=html;
+}
+
+// ════════════════════════════════════════════════════════
+//  NAVEGAÇÃO
+// ════════════════════════════════════════════════════════
+function showTab(id, el){
+  document.querySelectorAll('.pnl').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('pnl-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  else{
+    const tabs=document.querySelectorAll('.ntab');
+    const names=['resumo','pendentes','clientes','produtos','promotores','historico','anomalias'];
+    const i=names.indexOf(id); if(i>-1)tabs[i].classList.add('active');
+  }
+  if(id==='clientes') renderClientes();
+  if(id==='produtos') renderProdutos();
+  if(id==='promotores') renderPromotores();
+  if(id==='historico') renderHistorico();
+  if(id==='anomalias') renderAnomalias();
+}
+
+// ════════════════════════════════════════════════════════
+//  EXPORT CSV
+// ════════════════════════════════════════════════════════
+function exportCSV(tipo){
+  if(!DADOS) return;
+  let rows, header;
+  if(tipo==='pendentes'){
+    header='Filial,Cod_Cliente,Cliente,Cod_Produto,Produto,Patrimônio,NF_Saida,Data_Saida,Dias_Aberto,Status,Vencimento_60d,Promotor,Pedido';
+    rows=DADOS.pendentes.map(p=>[
+      `${p.filCod}-${p.filDesc}`,p.cliCod,`"${p.cliNome}"`,p.prodCod,`"${p.prodDesc}"`,p.patrimonio,
+      p.nfSai,p.dataStr,p.dias,stDias(p.dias).label,venc60(p.data),`"${p.promotorNome}"`,p.pedido
+    ].join(','));
+  } else {
+    header='Tipo,Cod_Cliente,Cliente,Cod_Produto,Produto,NF_Saida,NF_Entrada,Data,Promotor,Situacao';
+    const lista=[];
+    DADOS.saidas.forEach(s=>{const sit=DADOS.devolvidos.find(d=>d.nfSai===s.nfSai)?'Devolvido':'Pendente';
+      lista.push([s.tipo,s.cliCod,`"${s.cliNome}"`,s.prodCod,`"${s.prodDesc}"`,s.nfSai||'',s.nfEnt||'',s.dataStr,`"${s.promotorNome}"`,sit].join(','));});
+    DADOS.entradas.forEach(e=>{
+      lista.push(['Entrada',e.cliCod,`"${e.cliNome}"`,e.prodCod,`"${e.prodDesc}"`,e.nfSai||'',e.nfEnt||'',e.dataStr,`"${e.promotorNome}"`,`"Retorno"`].join(','));});
+    rows=lista;
+  }
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,%EF%BB%BF'+encodeURIComponent([header,...rows].join('\n'));
+  a.download=`agroquima_emprestimos_${tipo}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>
