@@ -154,6 +154,10 @@ th{padding:9px 12px;text-align:left;font-size:.64rem;font-weight:800;text-transf
 [data-theme="dark"] th{color:var(--aq-light)}
 th:hover{background:var(--th-hover)}
 th .sort-arrow{color:var(--aq-light);margin-left:3px}
+th.th-sort-active{color:var(--aq-royal)!important;background:var(--th-hover)}
+th.th-sort-active .sort-arrow{color:var(--aq-royal);font-weight:900}
+[data-theme="dark"] th.th-sort-active{color:#90CAF9!important;background:var(--th-hover)}
+[data-theme="dark"] th.th-sort-active .sort-arrow{color:#90CAF9}
 td{padding:9px 12px;font-size:.77rem;border-bottom:1px solid var(--border);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tbody tr{cursor:pointer;transition:background .12s}
@@ -408,7 +412,7 @@ tbody tr.expanded{background:var(--row-exp)}
     </div>
     <div class="filter-group">
       <span class="filter-label">Ordenar</span>
-      <select id="fPendSort" onchange="renderPendentes()">
+      <select id="fPendSort" onchange="onPendSortChange()">
         <option value="dias_desc">Mais antigos primeiro</option>
         <option value="dias_asc">Mais recentes primeiro</option>
         <option value="cliente">Cliente A→Z</option>
@@ -427,16 +431,11 @@ tbody tr.expanded{background:var(--row-exp)}
     </div>
     <div class="table-scroll">
       <table>
-        <thead><tr>
+        <thead id="theadPend"><tr>
           <th></th>
-          <th onclick="sortPend('cliNome')">Cliente <span class="sort-arrow">↕</span></th>
-          <th onclick="sortPend('prodDesc')">Produto <span class="sort-arrow">↕</span></th>
-          <th onclick="sortPend('nfSaida')">NF Saída <span class="sort-arrow">↕</span></th>
-          <th onclick="sortPend('data')">Data Saída <span class="sort-arrow">↕</span></th>
-          <th onclick="sortPend('dias')">Dias em Aberto <span class="sort-arrow">↕</span></th>
-          <th>Status</th>
-          <th onclick="sortPend('promotorNome')">Promotor <span class="sort-arrow">↕</span></th>
-          <th>Patrimônio</th>
+          <th>Cliente</th><th>Produto</th><th>NF Saída</th>
+          <th>Data Saída</th><th>Dias em Aberto</th>
+          <th>Status</th><th>Promotor</th><th>Patrimônio</th>
         </tr></thead>
         <tbody id="tbodyPend"></tbody>
       </table>
@@ -477,7 +476,7 @@ tbody tr.expanded{background:var(--row-exp)}
       <button class="btn-csv" onclick="exportCSV('produtos')">⬇ CSV</button>
     </div>
     <div class="table-scroll">
-      <table><thead><tr>
+      <table><thead id="theadProd"><tr>
         <th>Código</th><th>Produto</th><th>Pendentes</th><th>Devolvidos</th><th>Total Saídas</th><th>Mais Antiga</th><th>Dias Máx</th><th>Status</th>
       </tr></thead><tbody id="tbodyProd"></tbody></table>
     </div>
@@ -494,7 +493,7 @@ tbody tr.expanded{background:var(--row-exp)}
       <button class="btn-csv" onclick="exportCSV('promotores')">⬇ CSV</button>
     </div>
     <div class="table-scroll">
-      <table><thead><tr>
+      <table><thead id="theadProm"><tr>
         <th>Promotor</th><th>Pendentes</th><th>Clientes</th><th>Vencidos >60d</th><th>Atenção 45–60d</th><th>Mais Antigo (d)</th><th>% do Total</th>
       </tr></thead><tbody id="tbodyProm"></tbody></table>
     </div>
@@ -520,7 +519,7 @@ tbody tr.expanded{background:var(--row-exp)}
       <span class="tcount" id="cntHist">—</span>
     </div>
     <div class="table-scroll">
-      <table><thead><tr>
+      <table><thead id="theadHist"><tr>
         <th>Tipo</th><th>Cliente</th><th>Produto</th><th>NF Saída</th><th>NF Entrada</th><th>Data</th><th>Promotor</th><th>Situação</th>
       </tr></thead><tbody id="tbodyHist"></tbody></table>
     </div>
@@ -591,7 +590,56 @@ function showToast(msg, type='ok', ms=3000){
 //  ESTADO GLOBAL
 // ════════════════════════════════════════════════════════
 let DADOS = null;
-let sortPendCol = 'dias', sortPendAsc = false;
+const SORT = {
+  pend: {col:'dias', asc:false},
+  prod: {col:'pend', asc:false},
+  prom: {col:'pend', asc:false},
+  hist: {col:'data', asc:false}
+};
+
+function sortArr(arr, col, asc){
+  return arr.slice().sort((a,b)=>{
+    let av=a[col], bv=b[col];
+    if(av instanceof Date||bv instanceof Date){
+      const ta=av instanceof Date?av.getTime():0;
+      const tb=bv instanceof Date?bv.getTime():0;
+      return asc?ta-tb:tb-ta;
+    }
+    if(av===null||av===undefined) av='';
+    if(bv===null||bv===undefined) bv='';
+    if(typeof av==='number'&&typeof bv==='number') return asc?av-bv:bv-av;
+    return asc
+      ?String(av).localeCompare(String(bv),'pt-BR',{numeric:true})
+      :String(bv).localeCompare(String(av),'pt-BR',{numeric:true});
+  });
+}
+
+function buildTh(label, tbl, col, align){
+  const s=SORT[tbl], active=s.col===col;
+  const arrow=active?(s.asc?'↑':'↓'):'↕';
+  const cls=active?' class="th-sort-active"':'';
+  const sty=align?` style="text-align:${align}"`:'';
+  return `<th${cls}${sty} onclick="doSort('${tbl}','${col}')">${label} <span class="sort-arrow">${arrow}</span></th>`;
+}
+
+function doSort(tbl, col){
+  const s=SORT[tbl];
+  s.asc=(s.col===col)?!s.asc:false;
+  s.col=col;
+  if(tbl==='pend')renderPendentes();
+  else if(tbl==='prod')renderProdutos();
+  else if(tbl==='prom')renderPromotores();
+  else if(tbl==='hist')renderHistorico();
+}
+
+function onPendSortChange(){
+  const v=document.getElementById('fPendSort').value;
+  if(v==='dias_desc'){SORT.pend.col='dias';SORT.pend.asc=false;}
+  else if(v==='dias_asc'){SORT.pend.col='dias';SORT.pend.asc=true;}
+  else if(v==='cliente'){SORT.pend.col='cliNome';SORT.pend.asc=true;}
+  else if(v==='nf'){SORT.pend.col='nfSai';SORT.pend.asc=true;}
+  renderPendentes();
+}
 const HOJE = new Date();
 
 document.getElementById('dt-display').textContent =
@@ -896,11 +944,18 @@ function renderPendentes(){
     return mn&&mp&&mm&&ms&&mf;
   });
 
-  const sortSel=document.getElementById('fPendSort').value;
-  if(sortSel==='dias_desc')f.sort((a,b)=>b.dias-a.dias);
-  else if(sortSel==='dias_asc')f.sort((a,b)=>a.dias-b.dias);
-  else if(sortSel==='cliente')f.sort((a,b)=>a.cliNome.localeCompare(b.cliNome));
-  else if(sortSel==='nf')f.sort((a,b)=>a.nfSai-b.nfSai);
+  f = sortArr(f, SORT.pend.col, SORT.pend.asc);
+
+  const tHP=document.getElementById('theadPend');
+  if(tHP) tHP.innerHTML=`<tr><th></th>
+    ${buildTh('Cliente','pend','cliNome')}
+    ${buildTh('Produto','pend','prodDesc')}
+    ${buildTh('NF Saída','pend','nfSai')}
+    ${buildTh('Data Saída','pend','data')}
+    ${buildTh('Dias em Aberto','pend','dias')}
+    <th>Status</th>
+    ${buildTh('Promotor','pend','promotorNome')}
+    <th>Patrimônio</th></tr>`;
 
   document.getElementById('cntPend').textContent=`${f.length} reg.`;
   document.getElementById('tfootPend').textContent=`Exibindo ${f.length} de ${DADOS.pendentes.length} pendentes`;
@@ -952,17 +1007,6 @@ function toggleExpand(id){
   exp.style.display=vis?'table-row':'none';
   tr.classList.toggle('expanded',vis);
   ic.textContent=vis?'▼':'▶';
-}
-
-function sortPend(col){
-  sortPendAsc = sortPendCol===col ? !sortPendAsc : false;
-  sortPendCol=col;
-  DADOS.pendentes.sort((a,b)=>{
-    const av=a[col]||'',bv=b[col]||'';
-    if(typeof av==='number')return sortPendAsc?av-bv:bv-av;
-    return sortPendAsc?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av));
-  });
-  renderPendentes();
 }
 
 function filtrarStatus(s){ document.getElementById('fPendStatus').value=s; renderPendentes(); }
@@ -1035,8 +1079,20 @@ function renderProdutos(){
   const devMap={};
   DADOS.devolvidos.forEach(d=>{devMap[d.prodCod]=(devMap[d.prodCod]||0)+1;});
 
-  const rows=Object.values(pm).sort((a,b)=>b.pend-a.pend);
-  const maxP=rows[0]?.pend||1;
+  const baseRows=Object.values(pm).map(r=>{const dev=devMap[r.cod]||0;return{...r,dev,tot:r.pend+dev};});
+  const rows=sortArr(baseRows, SORT.prod.col, SORT.prod.asc);
+  const maxP=Math.max(...rows.map(r=>r.pend),1);
+
+  const tHProd=document.getElementById('theadProd');
+  if(tHProd) tHProd.innerHTML=`<tr>
+    ${buildTh('Código','prod','cod')}
+    ${buildTh('Produto','prod','desc')}
+    ${buildTh('Pendentes','prod','pend')}
+    ${buildTh('Devolvidos','prod','dev')}
+    ${buildTh('Total Saídas','prod','tot')}
+    ${buildTh('Mais Antiga','prod','dataMin')}
+    ${buildTh('Dias Máx','prod','diasMax')}
+    <th>Status</th></tr>`;
 
   document.getElementById('prodBars').innerHTML=rows.map(r=>`
     <div class="prod-bar-item">
@@ -1049,13 +1105,13 @@ function renderProdutos(){
     </div>`).join('');
 
   document.getElementById('tbodyProd').innerHTML=rows.map(r=>{
-    const dev=devMap[r.cod]||0; const tot=r.pend+dev; const s=stDias(r.diasMax);
+    const s=stDias(r.diasMax);
     return`<tr>
       <td style="font-family:monospace">${r.cod}</td>
       <td><strong>${r.desc.substring(0,45)}</strong></td>
       <td style="font-weight:800;color:var(--alert)">${r.pend}</td>
-      <td style="color:var(--ok);font-weight:700">${dev}</td>
-      <td>${tot}</td>
+      <td style="color:var(--ok);font-weight:700">${r.dev}</td>
+      <td>${r.tot}</td>
       <td>${r.dataMin?r.dataMin.toLocaleDateString('pt-BR'):'—'}</td>
       <td><span class="${s.dcls}">${r.diasMax}</span></td>
       <td><span class="badge ${s.cls}">${s.label}</span></td>
@@ -1077,26 +1133,35 @@ function renderPromotores(){
     if(p.atencao)pm[k].atenc++;
     pm[k].diasMax=Math.max(pm[k].diasMax,p.dias);
   });
-  const rows=Object.values(pm).sort((a,b)=>b.pend-a.pend);
-  const total=rows.reduce((s,r)=>s+r.pend,0)||1;
+  const allProm=Object.values(pm);
+  const total=allProm.reduce((s,r)=>s+r.pend,0)||1;
+  const rows=sortArr(allProm.map(r=>({...r,cliCount:r.clis.size,pct:Math.round(r.pend/total*100)})), SORT.prom.col, SORT.prom.asc);
 
-  document.getElementById('promList').innerHTML=rows.map(r=>{
-    const pct=Math.round(r.pend/total*100);
-    return`<div class="prom-item" onclick="showTab('pendentes',null);document.getElementById('fPendProm').value='${r.nome.replace(/'/g,"'")}';renderPendentes()">
-      <div style="min-width:180px"><div class="prom-name">${r.nome.substring(0,38)}</div><div style="font-size:.68rem;color:var(--txt2)">${r.clis.size} clientes · ${r.venc} vencidos</div></div>
-      <div class="prom-bar-wrap"><div class="prom-bar-bg"><div class="prom-bar-fg" style="width:${pct}%"></div></div><div class="prom-pct">${pct}% do total</div></div>
+  const tHProm=document.getElementById('theadProm');
+  if(tHProm) tHProm.innerHTML=`<tr>
+    ${buildTh('Promotor','prom','nome')}
+    ${buildTh('Pendentes','prom','pend')}
+    ${buildTh('Clientes','prom','cliCount')}
+    ${buildTh('Vencidos >60d','prom','venc')}
+    ${buildTh('Atenção 45–60d','prom','atenc')}
+    ${buildTh('Mais Antigo (d)','prom','diasMax')}
+    ${buildTh('% do Total','prom','pct')}</tr>`;
+
+  document.getElementById('promList').innerHTML=rows.map(r=>`
+    <div class="prom-item" onclick="showTab('pendentes',null);document.getElementById('fPendProm').value='${r.nome.replace(/'/g,"'")}';renderPendentes()">
+      <div style="min-width:180px"><div class="prom-name">${r.nome.substring(0,38)}</div><div style="font-size:.68rem;color:var(--txt2)">${r.cliCount} clientes · ${r.venc} vencidos</div></div>
+      <div class="prom-bar-wrap"><div class="prom-bar-bg"><div class="prom-bar-fg" style="width:${r.pct}%"></div></div><div class="prom-pct">${r.pct}% do total</div></div>
       <div class="prom-count">${r.pend}</div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 
   document.getElementById('tbodyProm').innerHTML=rows.map(r=>`<tr onclick="showTab('pendentes',null);document.getElementById('fPendProm').value='${r.nome.replace(/'/g,"'")}';renderPendentes()" style="cursor:pointer">
     <td><strong>${r.nome.substring(0,40)}</strong></td>
     <td style="font-weight:800;color:var(--alert)">${r.pend}</td>
-    <td>${r.clis.size}</td>
+    <td>${r.cliCount}</td>
     <td style="color:${r.venc>0?'var(--alert)':'var(--ok)'};font-weight:700">${r.venc}</td>
     <td style="color:${r.atenc>0?'#F9A825':'var(--ok)'};font-weight:700">${r.atenc}</td>
     <td><span class="${stDias(r.diasMax).dcls}">${r.diasMax}</span></td>
-    <td>${Math.round(r.pend/total*100)}%</td>
+    <td>${r.pct}%</td>
   </tr>`).join('');
 }
 
@@ -1123,7 +1188,19 @@ function renderHistorico(){
     const mt=!tipo||r.tipo===tipo;
     const mp=!prod||r.prodCod===prod;
     return mn&&mt&&mp;
-  }).sort((a,b)=>(b.data||0)-(a.data||0));
+  });
+  f=sortArr(f, SORT.hist.col, SORT.hist.asc);
+
+  const tHHist=document.getElementById('theadHist');
+  if(tHHist) tHHist.innerHTML=`<tr>
+    ${buildTh('Tipo','hist','tipo')}
+    ${buildTh('Cliente','hist','cliNome')}
+    ${buildTh('Produto','hist','prodDesc')}
+    ${buildTh('NF Saída','hist','nfSai')}
+    ${buildTh('NF Entrada','hist','nfEnt')}
+    ${buildTh('Data','hist','data')}
+    ${buildTh('Promotor','hist','promotorNome')}
+    ${buildTh('Situação','hist','situacao')}</tr>`;
 
   document.getElementById('cntHist').textContent=`${f.length} reg.`;
   document.getElementById('tfootHist').textContent=`${Math.min(f.length,500)} de ${f.length} movimentações`;
