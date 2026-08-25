@@ -1051,7 +1051,7 @@ function renderClientes(){
       <div class="cli-card-body">
         ${c.items.sort((a,b)=>b.dias-a.dias).map(p=>`
           <div class="cli-item">
-            <div class="cli-item-prod">${p.prodDesc.substring(0,38)}</div>
+            <div class="cli-item-prod"><span style="font-family:monospace;font-size:.65rem;color:var(--txt2);font-weight:700;margin-right:4px">${p.prodCod}</span>${p.prodDesc.substring(0,35)}</div>
             <div class="cli-item-meta">
               <span>NF <strong>${p.nfSai}</strong></span>
               <span>${p.dataStr}</span>
@@ -1213,7 +1213,7 @@ function renderHistorico(){
     return`<tr>
       <td><span class="badge ${isSai?'badge-warn':'badge-ok'}">${r.tipo}</span></td>
       <td style="font-size:.74rem"><strong>${(r.cliNome||'—').substring(0,30)}</strong><br><span style="color:var(--txt2);font-size:.63rem">${r.cliCod}</span></td>
-      <td style="font-size:.7rem">${(r.prodDesc||'—').substring(0,30)}</td>
+      <td style="font-size:.7rem">${(r.prodDesc||'—').substring(0,30)}<br><span style="font-family:monospace;font-size:.62rem;color:var(--txt2)">${r.prodCod||''}</span></td>
       <td style="font-family:monospace;font-weight:600">${r.nfSai||'—'}</td>
       <td style="font-family:monospace">${r.nfEnt||'—'}</td>
       <td>${r.dataStr||'—'}</td>
@@ -1242,7 +1242,7 @@ function renderAnomalias(){
           <tbody>${crit.sort((a,b)=>b.dias-a.dias).map(p=>`<tr>
             <td style="font-family:monospace;font-weight:700">${p.nfSai}</td>
             <td>${p.cliNome.substring(0,30)}</td>
-            <td>${p.prodDesc.substring(0,25)}</td>
+            <td style="font-size:.71rem">${p.prodDesc.substring(0,25)}<br><span style="font-family:monospace;font-size:.62rem;color:var(--txt2)">Cód. ${p.prodCod}</span></td>
             <td>${p.dataStr}</td>
             <td style="color:var(--alert);font-weight:800">${p.dias}</td>
             <td>${(p.promotorNome||'—').substring(0,20)}</td>
@@ -1297,7 +1297,7 @@ function renderAnomalias(){
     html+=`<div class="anom-card info">
       <div class="anom-title" style="color:#F9A825">⏳ ${atenc.length} equipamento${atenc.length>1?'s':''} na janela de atenção (45–60 dias) — cobrar agora para evitar vencimento</div>
       <div class="anom-desc">
-        ${atenc.sort((a,b)=>b.dias-a.dias).map(p=>`<div style="padding:3px 0;border-bottom:1px solid var(--border);font-size:.73rem"><strong>${p.cliNome.substring(0,30)}</strong> · ${p.prodDesc.substring(0,25)} · <span style="color:#F9A825;font-weight:700">${p.dias}d</span> · Promotor: ${p.promotorNome}</div>`).join('')}
+        ${atenc.sort((a,b)=>b.dias-a.dias).map(p=>`<div style="padding:3px 0;border-bottom:1px solid var(--border);font-size:.73rem"><strong>${p.cliNome.substring(0,30)}</strong> · <span style="font-family:monospace;font-weight:700">${p.prodCod}</span> ${p.prodDesc.substring(0,25)} · <span style="color:#F9A825;font-weight:700">${p.dias}d</span> · Promotor: ${p.promotorNome}</div>`).join('')}
       </div>
     </div>`;
   }
